@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import {
   Beaker,
   Mail,
@@ -10,6 +9,7 @@ import {
   Sparkles,
   ShieldCheck,
 } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -19,19 +19,13 @@ export default function AuthPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const supabase = createSupabaseBrowserClient();
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setMessage("");
 
-    if (!supabase) {
-      setMessage(
-        "Supabase is not connected yet. Add the Supabase environment variables before signing in."
-      );
-      return;
-    }
-
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setMessage("Please enter your email and password.");
       return;
     }
@@ -46,36 +40,42 @@ export default function AuthPage() {
     try {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         });
 
         if (error) {
           setMessage(error.message);
-        } else {
-          window.location.href = "/";
+          return;
         }
-      } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              display_name: name.trim(),
-            },
-          },
-        });
 
-        if (error) {
-          setMessage(error.message);
-        } else if (data.session) {
-          window.location.href = "/";
-        } else {
-          setMessage(
-            "Account created! Check your email if Supabase asks you to confirm your address."
-          );
-        }
+        window.location.replace("/");
+        return;
       }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            display_name: name.trim(),
+          },
+        },
+      });
+
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+
+      if (data.session) {
+        window.location.replace("/");
+        return;
+      }
+
+      setMessage(
+        "Account created. Check your email if confirmation is required."
+      );
     } catch {
       setMessage("Something went wrong. Please try again.");
     } finally {
@@ -128,13 +128,12 @@ export default function AuthPage() {
 
               <div className="auth-input-wrapper">
                 <Sparkles size={18} />
+
                 <input
                   type="text"
                   placeholder="Your name"
                   value={name}
-                  onChange={(event) =>
-                    setName(event.target.value)
-                  }
+                  onChange={(event) => setName(event.target.value)}
                   autoComplete="name"
                 />
               </div>
@@ -146,13 +145,12 @@ export default function AuthPage() {
 
             <div className="auth-input-wrapper">
               <Mail size={18} />
+
               <input
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(event) =>
-                  setEmail(event.target.value)
-                }
+                onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
               />
             </div>
@@ -163,13 +161,12 @@ export default function AuthPage() {
 
             <div className="auth-input-wrapper">
               <Lock size={18} />
+
               <input
                 type="password"
                 placeholder="Your password"
                 value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
+                onChange={(event) => setPassword(event.target.value)}
                 autoComplete={
                   mode === "login"
                     ? "current-password"
@@ -185,7 +182,7 @@ export default function AuthPage() {
             disabled={loading}
           >
             {loading
-              ? "Please wait..."
+              ? "Connecting..."
               : mode === "login"
                 ? "Sign in"
                 : "Create account"}
@@ -214,10 +211,8 @@ export default function AuthPage() {
           className="auth-switch"
           type="button"
           onClick={() => {
-            setMode(
-              mode === "login"
-                ? "signup"
-                : "login"
+            setMode((current) =>
+              current === "login" ? "signup" : "login"
             );
             setMessage("");
           }}
@@ -229,10 +224,10 @@ export default function AuthPage() {
 
         <div className="auth-security">
           <ShieldCheck size={17} />
+
           <span>
-            Your research data is protected by
-            Supabase authentication and database
-            security policies.
+            Your research data is protected by Supabase
+            authentication and database security policies.
           </span>
         </div>
       </section>
