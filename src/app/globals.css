@@ -4475,3 +4475,162 @@ button {
     padding: 14px;
   }
 }
+/* =========================================================
+   REAL FILE SYSTEM CONTROLS
+   ========================================================= */
+
+.vr-files-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 15px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(255, 100, 100, .25);
+  background: rgba(255, 80, 80, .08);
+  color: #ffb4b4;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.vr-files-error button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.vr-files-loading {
+  min-height: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--vr-muted);
+  border: 1px solid var(--vr-border);
+  background: var(--vr-panel);
+  border-radius: var(--vr-radius);
+}
+
+.vr-files-loading svg {
+  color: var(--vr-accent);
+  animation: vr-spin 1.2s linear infinite;
+}
+
+@keyframes vr-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vr-real-upload {
+  min-height: 190px;
+  border: 1px dashed var(--vr-border);
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  color: var(--vr-accent);
+  transition: .2s ease;
+}
+
+.vr-real-upload:hover {
+  border-color: var(--vr-accent);
+  background: var(--vr-accent-soft);
+}
+
+.vr-real-upload strong {
+  margin-top: 10px;
+  color: var(--vr-text);
+  font-size: 14px;
+}
+
+.vr-real-upload span {
+  margin-top: 5px;
+  color: var(--vr-muted);
+  font-size: 11px;
+}
+
+.vr-real-upload input {
+  display: none;
+}
+
+.vr-selected-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 11px;
+  border: 1px solid var(--vr-border);
+  border-radius: 11px;
+  background: var(--vr-panel-2);
+}
+
+.vr-selected-file > div:last-child {
+  min-width: 0;
+}
+
+.vr-selected-file strong {
+  display: block;
+  color: var(--vr-text);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vr-selected-file span {
+  display: block;
+  color: var(--vr-muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.vr-upload-destination {
+  margin-top: 14px;
+  padding: 11px;
+  border: 1px solid var(--vr-border);
+  border-radius: 11px;
+  background: var(--vr-panel-2);
+}
+
+.vr-upload-destination span {
+  display: block;
+  color: var(--vr-muted);
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.vr-upload-destination strong {
+  color: var(--vr-text);
+  font-size: 12px;
+}
+
+.vr-file-card-footer button:disabled,
+.vr-modal-actions button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .vr-files-error {
+    align-items: flex-start;
+  }
+
+  .vr-files-toolbar-right {
+    width: 100%;
+  }
+
+  .vr-file-search {
+    min-width: 100%;
+    order: -1;
+  }
+}
