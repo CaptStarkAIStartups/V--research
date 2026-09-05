@@ -1,29 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
-  Archive,
   BookOpen,
-  Calculator,
   Camera,
+  Calculator,
   ChevronRight,
   Clock3,
   Compass,
   Database,
   FileText,
   Folder,
-  FolderPlus,
-  Globe2,
   Home,
-  Lightbulb,
   Menu,
-  MessageCircle,
   Moon,
   NotebookPen,
-  Play,
   Plus,
-  RefreshCw,
   Search,
   Settings,
   Sparkles,
@@ -31,7 +24,6 @@ import {
   Timer,
   Trash2,
   Upload,
-  Video,
   X,
 } from "lucide-react";
 
@@ -61,43 +53,26 @@ type Dataset = {
   created: string;
 };
 
-type ResearchResult = {
-  title?: string;
-  description?: string;
-  url?: string;
+type Result = {
+  title: string;
+  description: string;
+  url: string;
+  source: string;
 };
-
-const navItems: {
-  id: Page;
-  label: string;
-  icon: React.ReactNode;
-}[] = [
-  { id: "dashboard", label: "Dashboard", icon: <Home size={18} /> },
-  { id: "research", label: "Research Explorer", icon: <Search size={18} /> },
-  { id: "articles", label: "Research Articles", icon: <BookOpen size={18} /> },
-  { id: "datasets", label: "Datasets", icon: <Database size={18} /> },
-  { id: "notes", label: "Quick Notes", icon: <NotebookPen size={18} /> },
-  { id: "files", label: "Files & Folders", icon: <Folder size={18} /> },
-  { id: "ai", label: "AI Lab", icon: <Sparkles size={18} /> },
-  { id: "tools", label: "Research Tools", icon: <Calculator size={18} /> },
-  { id: "activity", label: "Activity", icon: <Activity size={18} /> },
-  { id: "settings", label: "Settings", icon: <Settings size={18} /> },
-];
 
 export default function VResearch() {
   const [page, setPage] = useState<Page>("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebar, setSidebar] = useState(true);
   const [dark, setDark] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<string[]>([]);
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
 
   const [showNote, setShowNote] = useState(false);
   const [showDataset, setShowDataset] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
 
   const [noteTitle, setNoteTitle] = useState("");
   const [noteText, setNoteText] = useState("");
@@ -105,71 +80,82 @@ export default function VResearch() {
   const [datasetName, setDatasetName] = useState("");
   const [datasetSource, setDatasetSource] = useState("");
 
-  const [clock, setClock] = useState(new Date());
+  const [results, setResults] = useState<Result[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const [researchResults, setResearchResults] = useState<ResearchResult[]>(
-    []
-  );
-  const [researchLoading, setResearchLoading] = useState(false);
+  const [time, setTime] = useState(new Date());
+  const [sessionSeconds, setSessionSeconds] = useState(0);
 
-  const [timerSeconds, setTimerSeconds] = useState(25 * 60);
+  const [timer, setTimer] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
-
-  const [activitySeconds, setActivitySeconds] = useState(0);
 
   const [calculator, setCalculator] = useState("");
 
   const [aiInput, setAiInput] = useState("");
-  const [aiMessages, setAiMessages] = useState<
-    { role: "user" | "assistant"; text: string }[]
-  >([]);
+  const [aiAnswer, setAiAnswer] = useState("");
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
-    const savedNotes = localStorage.getItem("vresearch_notes");
-    const savedDatasets = localStorage.getItem("vresearch_datasets");
-    const savedHistory = localStorage.getItem("vresearch_history");
-    const savedTheme = localStorage.getItem("vresearch_theme");
+    try {
+      const savedNotes = localStorage.getItem("vr_notes");
+      const savedDatasets = localStorage.getItem("vr_datasets");
+      const savedHistory = localStorage.getItem("vr_history");
+      const savedTheme = localStorage.getItem("vr_theme");
 
-    if (savedNotes) setNotes(JSON.parse(savedNotes));
-    if (savedDatasets) setDatasets(JSON.parse(savedDatasets));
-    if (savedHistory) setSearchHistory(JSON.parse(savedHistory));
+      if (savedNotes) {
+        setNotes(JSON.parse(savedNotes));
+      }
 
-    if (savedTheme === "light") setDark(false);
+      if (savedDatasets) {
+        setDatasets(JSON.parse(savedDatasets));
+      }
+
+      if (savedHistory) {
+        setHistory(JSON.parse(savedHistory));
+      }
+
+      if (savedTheme === "light") {
+        setDark(false);
+      }
+    } catch {
+      // Ignore invalid local data.
+    }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("vresearch_notes", JSON.stringify(notes));
+    localStorage.setItem("vr_notes", JSON.stringify(notes));
   }, [notes]);
 
   useEffect(() => {
-    localStorage.setItem("vresearch_datasets", JSON.stringify(datasets));
+    localStorage.setItem("vr_datasets", JSON.stringify(datasets));
   }, [datasets]);
 
   useEffect(() => {
-    localStorage.setItem("vresearch_history", JSON.stringify(searchHistory));
-  }, [searchHistory]);
+    localStorage.setItem("vr_history", JSON.stringify(history));
+  }, [history]);
 
   useEffect(() => {
-    localStorage.setItem("vresearch_theme", dark ? "dark" : "light");
+    localStorage.setItem("vr_theme", dark ? "dark" : "light");
   }, [dark]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setClock(new Date());
-      setActivitySeconds((value) => value + 1);
+    const interval = window.setInterval(() => {
+      setTime(new Date());
+      setSessionSeconds((value) => value + 1);
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (!timerRunning) return;
+    if (!timerRunning) {
+      return;
+    }
 
-    const interval = setInterval(() => {
-      setTimerSeconds((value) => {
+    const interval = window.setInterval(() => {
+      setTimer((value) => {
         if (value <= 1) {
           setTimerRunning(false);
           return 0;
@@ -179,210 +165,172 @@ export default function VResearch() {
       });
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, [timerRunning]);
 
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      if (videoStream) {
+        videoStream.getTracks().forEach((track) => track.stop());
+      }
     };
-  }, []);
+  }, [videoStream]);
 
-  const formattedTime = useMemo(
-    () =>
-      clock.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }),
-    [clock]
-  );
+  async function searchResearch() {
+    const query = search.trim();
 
-  const formattedDate = useMemo(
-    () =>
-      clock.toLocaleDateString([], {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-    [clock]
-  );
+    if (!query) {
+      return;
+    }
 
-  const timerDisplay = `${String(Math.floor(timerSeconds / 60)).padStart(
-    2,
-    "0"
-  )}:${String(timerSeconds % 60).padStart(2, "0")}`;
+    setLoading(true);
 
-  function goTo(next: Page) {
-    setPage(next);
-  }
+    setHistory((oldHistory) => {
+      const updated = oldHistory.filter((item) => item !== query);
+      return [query, ...updated].slice(0, 10);
+    });
 
-  function performSearch(value = search) {
-    const query = value.trim();
-
-    if (!query) return;
-
-    setSearch(query);
-
-    setSearchHistory((history) => [
-      query,
-      ...history.filter((item) => item !== query),
-    ].slice(0, 10));
-
-    goTo("research");
-    searchResearch(query);
-  }
-
-  async function searchResearch(query: string) {
-    setResearchLoading(true);
+    setPage("research");
 
     try {
       const response = await fetch(
-        `/api/research?q=${encodeURIComponent(query)}&provider=all`
+        "/api/research?q=" + encodeURIComponent(query)
       );
 
-      if (!response.ok) throw new Error("Research search failed");
+      if (!response.ok) {
+        throw new Error("Search failed");
+      }
 
       const data = await response.json();
 
-      setResearchResults(data.results || []);
+      setResults(Array.isArray(data.results) ? data.results : []);
     } catch {
-      setResearchResults([
+      setResults([
         {
-          title: "Search service unavailable",
+          title: "Research service unavailable",
           description:
-            "The research API is not connected yet. The next setup step will connect the research providers.",
+            "The research sources could not be reached. Check the API setup.",
+          url: "",
+          source: "V Research",
         },
       ]);
     } finally {
-      setResearchLoading(false);
+      setLoading(false);
     }
   }
 
   function saveNote() {
-    if (!noteTitle.trim() && !noteText.trim()) return;
+    if (!noteTitle.trim() && !noteText.trim()) {
+      return;
+    }
 
-    const note: Note = {
+    const newNote: Note = {
       id: Date.now(),
       title: noteTitle.trim() || "Untitled Note",
       text: noteText.trim(),
       created: new Date().toLocaleString(),
     };
 
-    setNotes((items) => [note, ...items]);
+    setNotes((oldNotes) => [newNote, ...oldNotes]);
+
     setNoteTitle("");
     setNoteText("");
     setShowNote(false);
   }
 
-  function deleteNote(id: number) {
-    setNotes((items) => items.filter((item) => item.id !== id));
-  }
-
   function saveDataset() {
-    if (!datasetName.trim()) return;
+    if (!datasetName.trim()) {
+      return;
+    }
 
-    const dataset: Dataset = {
+    const newDataset: Dataset = {
       id: Date.now(),
       name: datasetName.trim(),
       source: datasetSource.trim() || "Manual",
       created: new Date().toLocaleString(),
     };
 
-    setDatasets((items) => [dataset, ...items]);
+    setDatasets((oldDatasets) => [newDataset, ...oldDatasets]);
 
     setDatasetName("");
     setDatasetSource("");
     setShowDataset(false);
   }
 
-  function deleteDataset(id: number) {
-    setDatasets((items) => items.filter((item) => item.id !== id));
+  function exportData() {
+    const data = {
+      notes,
+      datasets,
+      history,
+      exportedAt: new Date().toISOString(),
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "v-research-data.json";
+    link.click();
+
+    URL.revokeObjectURL(url);
   }
 
   async function openCamera() {
-    setShowCamera(true);
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: true,
+        audio: false,
       });
 
-      streamRef.current = stream;
-
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      }, 100);
+      setVideoStream(stream);
+      setCameraOpen(true);
     } catch {
-      alert(
-        "Camera permission was not available. Please allow camera access in your browser."
+      window.alert(
+        "Camera permission was not available. Please allow camera access."
       );
     }
   }
 
   function closeCamera() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    setShowCamera(false);
-  }
+    if (videoStream) {
+      videoStream.getTracks().forEach((track) => track.stop());
+    }
 
-  function takePhoto() {
-    const video = videoRef.current;
-
-    if (!video) return;
-
-    const canvas = document.createElement("canvas");
-
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-
-    const context = canvas.getContext("2d");
-
-    if (!context) return;
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const link = document.createElement("a");
-    link.download = `v-research-capture-${Date.now()}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  }
-
-  function resetTimer() {
-    setTimerRunning(false);
-    setTimerSeconds(25 * 60);
+    setVideoStream(null);
+    setCameraOpen(false);
   }
 
   function calculate() {
     try {
-      if (!calculator.trim()) return;
+      const safe = calculator.replace(/[^0-9+\-*/().% ]/g, "");
 
-      const cleaned = calculator.replace(/[^0-9+\-*/().% ]/g, "");
+      if (!safe.trim()) {
+        return;
+      }
 
-      // Basic calculator evaluation for arithmetic expressions typed by the user.
-      const result = Function(`"use strict"; return (${cleaned})`)();
+      const answer = Function(
+        '"use strict"; return (' + safe + ")"
+      )();
 
-      setCalculator(String(result));
+      setCalculator(String(answer));
     } catch {
       setCalculator("Error");
     }
   }
 
   async function askAI() {
-    if (!aiInput.trim()) return;
+    const message = aiInput.trim();
 
-    const question = aiInput.trim();
-
-    setAiMessages((messages) => [
-      ...messages,
-      { role: "user", text: question },
-    ]);
+    if (!message) {
+      return;
+    }
 
     setAiInput("");
+    setAiAnswer("Thinking...");
 
     try {
       const response = await fetch("/api/ai", {
@@ -391,83 +339,38 @@ export default function VResearch() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: question,
+          message,
         }),
       });
 
       const data = await response.json();
 
-      setAiMessages((messages) => [
-        ...messages,
-        {
-          role: "assistant",
-          text:
-            data.text ||
-            "The AI service is not connected yet. We will connect it in the next step.",
-        },
-      ]);
+      setAiAnswer(
+        data.text ||
+          "AI Lab is ready, but the AI provider has not been configured."
+      );
     } catch {
-      setAiMessages((messages) => [
-        ...messages,
-        {
-          role: "assistant",
-          text:
-            "AI Lab is ready, but the AI backend still needs to be connected.",
-        },
-      ]);
+      setAiAnswer("AI service is currently unavailable.");
     }
   }
 
-  function exportData() {
-    const data = {
-      notes,
-      datasets,
-      searchHistory,
-      exportedAt: new Date().toISOString(),
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-
-    const link = document.createElement("a");
-
-    link.href = URL.createObjectURL(blob);
-    link.download = "v-research-data.json";
-    link.click();
-
-    URL.revokeObjectURL(link.href);
+  function resetTimer() {
+    setTimerRunning(false);
+    setTimer(25 * 60);
   }
 
-  function clearHistory() {
-    setSearchHistory([]);
-  }
-
-  function resetEverything() {
-    const confirmed = window.confirm(
-      "Reset V Research local data? This will remove saved notes, datasets and search history from this browser."
-    );
-
-    if (!confirmed) return;
-
-    localStorage.removeItem("vresearch_notes");
-    localStorage.removeItem("vresearch_datasets");
-    localStorage.removeItem("vresearch_history");
-
-    setNotes([]);
-    setDatasets([]);
-    setSearchHistory([]);
-  }
+  const timeText = time.toLocaleTimeString();
+  const dateText = time.toLocaleDateString();
 
   return (
     <div className={dark ? "vr-app dark" : "vr-app light"}>
-      <aside className={sidebarOpen ? "vr-sidebar open" : "vr-sidebar"}>
+      <aside className={sidebar ? "vr-sidebar open" : "vr-sidebar"}>
         <div className="vr-logo">
           <div className="vr-logo-icon">
             <Sparkles size={22} />
           </div>
 
-          {sidebarOpen && (
+          {sidebar && (
             <div>
               <strong>V Research</strong>
               <span>Research Command Center</span>
@@ -476,37 +379,96 @@ export default function VResearch() {
         </div>
 
         <nav className="vr-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={page === item.id ? "nav-active" : ""}
-              onClick={() => goTo(item.id)}
-              title={item.label}
-            >
-              {item.icon}
-              {sidebarOpen && <span>{item.label}</span>}
-            </button>
-          ))}
-        </nav>
+          <NavButton
+            active={page === "dashboard"}
+            icon={<Home size={18} />}
+            label="Dashboard"
+            open={sidebar}
+            onClick={() => setPage("dashboard")}
+          />
 
-        {sidebarOpen && (
-          <div className="sidebar-bottom">
-            <div className="mini-status">
-              <span className="status-dot" />
-              Research system active
-            </div>
-          </div>
-        )}
+          <NavButton
+            active={page === "research"}
+            icon={<Search size={18} />}
+            label="Research Explorer"
+            open={sidebar}
+            onClick={() => setPage("research")}
+          />
+
+          <NavButton
+            active={page === "articles"}
+            icon={<BookOpen size={18} />}
+            label="Research Articles"
+            open={sidebar}
+            onClick={() => setPage("articles")}
+          />
+
+          <NavButton
+            active={page === "datasets"}
+            icon={<Database size={18} />}
+            label="Datasets"
+            open={sidebar}
+            onClick={() => setPage("datasets")}
+          />
+
+          <NavButton
+            active={page === "notes"}
+            icon={<NotebookPen size={18} />}
+            label="Quick Notes"
+            open={sidebar}
+            onClick={() => setPage("notes")}
+          />
+
+          <NavButton
+            active={page === "files"}
+            icon={<Folder size={18} />}
+            label="Files & Folders"
+            open={sidebar}
+            onClick={() => setPage("files")}
+          />
+
+          <NavButton
+            active={page === "ai"}
+            icon={<Sparkles size={18} />}
+            label="AI Lab"
+            open={sidebar}
+            onClick={() => setPage("ai")}
+          />
+
+          <NavButton
+            active={page === "tools"}
+            icon={<Calculator size={18} />}
+            label="Research Tools"
+            open={sidebar}
+            onClick={() => setPage("tools")}
+          />
+
+          <NavButton
+            active={page === "activity"}
+            icon={<Activity size={18} />}
+            label="Activity"
+            open={sidebar}
+            onClick={() => setPage("activity")}
+          />
+
+          <NavButton
+            active={page === "settings"}
+            icon={<Settings size={18} />}
+            label="Settings"
+            open={sidebar}
+            onClick={() => setPage("settings")}
+          />
+        </nav>
       </aside>
 
       <main className="vr-main">
         <header className="vr-topbar">
           <button
             className="icon-button"
-            onClick={() => setSidebarOpen((value) => !value)}
-            title="Toggle sidebar"
+            onClick={() => setSidebar(!sidebar)}
+            title="Menu"
           >
-            <Menu size={21} />
+            <Menu size={20} />
           </button>
 
           <div className="global-search">
@@ -516,22 +478,30 @@ export default function VResearch() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter") performSearch();
+                if (event.key === "Enter") {
+                  searchResearch();
+                }
               }}
-              placeholder="Search research, papers, datasets..."
+              placeholder="Search research..."
             />
 
-            {searchHistory.length > 0 && (
+            {history.length > 0 && (
               <div className="search-history">
                 <div className="history-header">
                   <span>Recent searches</span>
-                  <button onClick={clearHistory}>Clear</button>
+
+                  <button onClick={() => setHistory([])}>
+                    Clear
+                  </button>
                 </div>
 
-                {searchHistory.slice(0, 5).map((item) => (
+                {history.slice(0, 5).map((item) => (
                   <button
                     key={item}
-                    onClick={() => performSearch(item)}
+                    onClick={() => {
+                      setSearch(item);
+                      setTimeout(searchResearch, 0);
+                    }}
                   >
                     <Clock3 size={14} />
                     {item}
@@ -546,7 +516,7 @@ export default function VResearch() {
             onClick={() => setShowNote(true)}
             title="Quick Note"
           >
-            <NotebookPen size={19} />
+            <NotebookPen size={18} />
             <span>Quick Note</span>
           </button>
 
@@ -555,14 +525,14 @@ export default function VResearch() {
             onClick={openCamera}
             title="Camera"
           >
-            <Camera size={19} />
+            <Camera size={18} />
             <span>Camera</span>
           </button>
 
           <button
             className="icon-button"
-            onClick={() => setDark((value) => !value)}
-            title="Toggle theme"
+            onClick={() => setDark(!dark)}
+            title="Theme"
           >
             {dark ? <Sun size={19} /> : <Moon size={19} />}
           </button>
@@ -570,388 +540,72 @@ export default function VResearch() {
 
         <section className="vr-content">
           {page === "dashboard" && (
-            <>
-              <div className="page-heading">
-                <div>
-                  <div className="eyebrow">WELCOME BACK 👋</div>
-                  <h1>Research Command Center</h1>
-                  <p>
-                    Search, organize, analyze and build your research
-                    workspace.
-                  </p>
-                </div>
-
-                <div className="clock-card">
-                  <Clock3 size={18} />
-                  <strong>{formattedTime}</strong>
-                  <span>{formattedDate}</span>
-                </div>
-              </div>
-
-              <div className="dashboard-grid">
-                <DashboardCard
-                  icon={<Search size={24} />}
-                  title="Research Explorer"
-                  value="Search"
-                  description="Wikipedia, OpenAlex & PubMed"
-                  onClick={() => goTo("research")}
-                />
-
-                <DashboardCard
-                  icon={<Database size={24} />}
-                  title="Datasets"
-                  value={String(datasets.length)}
-                  description="Research datasets stored"
-                  onClick={() => goTo("datasets")}
-                />
-
-                <DashboardCard
-                  icon={<NotebookPen size={24} />}
-                  title="Quick Notes"
-                  value={String(notes.length)}
-                  description="Ideas & observations"
-                  onClick={() => goTo("notes")}
-                />
-
-                <DashboardCard
-                  icon={<Sparkles size={24} />}
-                  title="AI Lab"
-                  value="Ready"
-                  description="Research assistant workspace"
-                  onClick={() => goTo("ai")}
-                />
-              </div>
-
-              <div className="large-grid">
-                <section className="panel timer-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <span className="eyebrow">FOCUS ENGINE</span>
-                      <h2>Research Timer</h2>
-                    </div>
-                    <Timer size={22} />
-                  </div>
-
-                  <div className="timer-display">{timerDisplay}</div>
-
-                  <div className="timer-controls">
-                    <button
-                      className="primary-button"
-                      onClick={() => setTimerRunning((value) => !value)}
-                    >
-                      {timerRunning ? "Pause" : "Start"}
-                    </button>
-
-                    <button
-                      className="secondary-button"
-                      onClick={resetTimer}
-                    >
-                      <RefreshCw size={16} />
-                      Reset
-                    </button>
-                  </div>
-
-                  <div className="timer-presets">
-                    {[5, 15, 25, 45, 60].map((minutes) => (
-                      <button
-                        key={minutes}
-                        onClick={() => {
-                          setTimerRunning(false);
-                          setTimerSeconds(minutes * 60);
-                        }}
-                      >
-                        {minutes}m
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="panel activity-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <span className="eyebrow">LIVE</span>
-                      <h2>Workspace Activity</h2>
-                    </div>
-
-                    <Activity size={22} />
-                  </div>
-
-                  <div className="activity-number">
-                    {formatDuration(activitySeconds)}
-                  </div>
-
-                  <p>Current research session</p>
-
-                  <div className="activity-bar">
-                    <span />
-                  </div>
-
-                  <button
-                    className="secondary-button full"
-                    onClick={() => goTo("activity")}
-                  >
-                    View Activity Log
-                    <ChevronRight size={16} />
-                  </button>
-                </section>
-              </div>
-
-              <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <span className="eyebrow">QUICK ACCESS</span>
-                    <h2>Research Workspace</h2>
-                  </div>
-                </div>
-
-                <div className="quick-grid">
-                  <QuickTool
-                    icon={<BookOpen size={22} />}
-                    title="Articles"
-                    text="Latest research"
-                    onClick={() => goTo("articles")}
-                  />
-
-                  <QuickTool
-                    icon={<Archive size={22} />}
-                    title="Files"
-                    text="Manage research files"
-                    onClick={() => goTo("files")}
-                  />
-
-                  <QuickTool
-                    icon={<Compass size={22} />}
-                    title="Tools"
-                    text="Calculator, converter & more"
-                    onClick={() => goTo("tools")}
-                  />
-
-                  <QuickTool
-                    icon={<Globe2 size={22} />}
-                    title="Global Research"
-                    text="Explore worldwide knowledge"
-                    onClick={() => goTo("research")}
-                  />
-                </div>
-              </section>
-            </>
+            <Dashboard
+              time={timeText}
+              date={dateText}
+              notes={notes.length}
+              datasets={datasets.length}
+              timer={timer}
+              timerRunning={timerRunning}
+              setTimerRunning={setTimerRunning}
+              resetTimer={resetTimer}
+              sessionSeconds={sessionSeconds}
+              setPage={setPage}
+            />
           )}
 
           {page === "research" && (
             <ResearchPage
               search={search}
               setSearch={setSearch}
-              performSearch={performSearch}
-              loading={researchLoading}
-              results={researchResults}
+              searchResearch={searchResearch}
+              results={results}
+              loading={loading}
             />
           )}
 
           {page === "articles" && (
-            <ArticlesPage onSearch={(query) => performSearch(query)} />
+            <ArticlesPage
+              setSearch={setSearch}
+              searchResearch={searchResearch}
+            />
           )}
 
           {page === "datasets" && (
-            <section>
-              <PageTitle
-                eyebrow="DATA MANAGER"
-                title="Datasets"
-                description="Organize research datasets and sources."
-                action={
-                  <button
-                    className="primary-button"
-                    onClick={() => setShowDataset(true)}
-                  >
-                    <Plus size={17} />
-                    New Dataset
-                  </button>
-                }
-              />
-
-              <div className="panel">
-                {datasets.length === 0 ? (
-                  <EmptyState
-                    icon={<Database size={30} />}
-                    title="No datasets yet"
-                    text="Create your first research dataset."
-                    button={
-                      <button
-                        className="primary-button"
-                        onClick={() => setShowDataset(true)}
-                      >
-                        Create Dataset
-                      </button>
-                    }
-                  />
-                ) : (
-                  <div className="item-list">
-                    {datasets.map((dataset) => (
-                      <div className="list-item" key={dataset.id}>
-                        <div className="list-icon">
-                          <Database size={20} />
-                        </div>
-
-                        <div className="list-main">
-                          <strong>{dataset.name}</strong>
-                          <span>{dataset.source}</span>
-                          <small>{dataset.created}</small>
-                        </div>
-
-                        <button
-                          className="danger-icon"
-                          onClick={() => deleteDataset(dataset.id)}
-                        >
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="panel wikipedia-panel">
-                <div className="panel-heading">
-                  <div>
-                    <span className="eyebrow">KNOWLEDGE ENGINE</span>
-                    <h2>Wikipedia Research Search</h2>
-                  </div>
-                  <Globe2 size={22} />
-                </div>
-
-                <p>
-                  Search Wikipedia directly through the Research Explorer and
-                  save useful results into your research workflow.
-                </p>
-
-                <button
-                  className="secondary-button"
-                  onClick={() => goTo("research")}
-                >
-                  Open Research Explorer
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </section>
+            <DatasetsPage
+              datasets={datasets}
+              deleteDataset={(id) =>
+                setDatasets((items) =>
+                  items.filter((item) => item.id !== id)
+                )
+              }
+              openCreate={() => setShowDataset(true)}
+            />
           )}
 
           {page === "notes" && (
-            <section>
-              <PageTitle
-                eyebrow="IDEA SPACE"
-                title="Quick Notes"
-                description="Capture hypotheses, observations and research ideas."
-                action={
-                  <button
-                    className="primary-button"
-                    onClick={() => setShowNote(true)}
-                  >
-                    <Plus size={17} />
-                    New Note
-                  </button>
-                }
-              />
-
-              {notes.length === 0 ? (
-                <section className="panel">
-                  <EmptyState
-                    icon={<NotebookPen size={30} />}
-                    title="Your notebook is empty"
-                    text="Start collecting your research ideas."
-                    button={
-                      <button
-                        className="primary-button"
-                        onClick={() => setShowNote(true)}
-                      >
-                        Write a Note
-                      </button>
-                    }
-                  />
-                </section>
-              ) : (
-                <div className="notes-grid">
-                  {notes.map((note) => (
-                    <article className="note-card" key={note.id}>
-                      <div className="note-top">
-                        <NotebookPen size={20} />
-                        <button
-                          className="danger-icon"
-                          onClick={() => deleteNote(note.id)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-
-                      <h3>{note.title}</h3>
-                      <p>{note.text}</p>
-                      <small>{note.created}</small>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
+            <NotesPage
+              notes={notes}
+              deleteNote={(id) =>
+                setNotes((items) =>
+                  items.filter((item) => item.id !== id)
+                )
+              }
+              openCreate={() => setShowNote(true)}
+            />
           )}
 
           {page === "files" && (
-            <FilesPage onExport={exportData} />
+            <FilesPage exportData={exportData} />
           )}
 
           {page === "ai" && (
-            <section>
-              <PageTitle
-                eyebrow="AI LAB"
-                title="Research AI"
-                description="Your research assistant workspace."
-              />
-
-              <div className="ai-layout">
-                <section className="panel ai-chat">
-                  <div className="ai-messages">
-                    {aiMessages.length === 0 ? (
-                      <EmptyState
-                        icon={<Sparkles size={30} />}
-                        title="AI Lab is ready"
-                        text="Ask a research question, request an explanation, or analyze an idea."
-                      />
-                    ) : (
-                      aiMessages.map((message, index) => (
-                        <div
-                          key={index}
-                          className={
-                            message.role === "user"
-                              ? "message user-message"
-                              : "message assistant-message"
-                          }
-                        >
-                          <span>
-                            {message.role === "user" ? "YOU" : "AI"}
-                          </span>
-                          <p>{message.text}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="ai-input">
-                    <textarea
-                      value={aiInput}
-                      onChange={(event) => setAiInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                          event.preventDefault();
-                          askAI();
-                        }
-                      }}
-                      placeholder="Ask your research assistant..."
-                    />
-
-                    <button className="primary-button" onClick={askAI}>
-                      <Sparkles size={17} />
-                      Ask AI
-                    </button>
-                  </div>
-                </section>
-              </div>
-            </section>
+            <AIPage
+              input={aiInput}
+              setInput={setAiInput}
+              answer={aiAnswer}
+              askAI={askAI}
+            />
           )}
 
           {page === "tools" && (
@@ -959,7 +613,7 @@ export default function VResearch() {
               calculator={calculator}
               setCalculator={setCalculator}
               calculate={calculate}
-              timerDisplay={timerDisplay}
+              timer={timer}
               timerRunning={timerRunning}
               setTimerRunning={setTimerRunning}
               resetTimer={resetTimer}
@@ -967,175 +621,46 @@ export default function VResearch() {
           )}
 
           {page === "activity" && (
-            <section>
-              <PageTitle
-                eyebrow="WORKSPACE MONITOR"
-                title="Activity"
-                description="Visible tracking of your V Research session."
-              />
-
-              <div className="dashboard-grid">
-                <DashboardCard
-                  icon={<Clock3 size={24} />}
-                  title="Current Session"
-                  value={formatDuration(activitySeconds)}
-                  description="Time since this page opened"
-                />
-
-                <DashboardCard
-                  icon={<Activity size={24} />}
-                  title="Status"
-                  value="Active"
-                  description="Workspace is running"
-                />
-
-                <DashboardCard
-                  icon={<NotebookPen size={24} />}
-                  title="Notes"
-                  value={String(notes.length)}
-                  description="Saved locally"
-                />
-
-                <DashboardCard
-                  icon={<Database size={24} />}
-                  title="Datasets"
-                  value={String(datasets.length)}
-                  description="Saved locally"
-                />
-              </div>
-
-              <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <span className="eyebrow">SESSION</span>
-                    <h2>Current activity</h2>
-                  </div>
-                  <Activity size={22} />
-                </div>
-
-                <div className="activity-log">
-                  <div>
-                    <span className="status-dot" />
-                    V Research opened
-                    <small>Current session</small>
-                  </div>
-
-                  <div>
-                    <span className="status-dot" />
-                    Workspace monitoring active
-                    <small>{formatDuration(activitySeconds)}</small>
-                  </div>
-                </div>
-              </section>
-            </section>
+            <ActivityPage
+              seconds={sessionSeconds}
+              notes={notes.length}
+              datasets={datasets.length}
+            />
           )}
 
           {page === "settings" && (
-            <section>
-              <PageTitle
-                eyebrow="CONTROL CENTER"
-                title="Settings"
-                description="Customize your research environment."
-              />
-
-              <div className="settings-grid">
-                <section className="panel">
-                  <div className="panel-heading">
-                    <div>
-                      <span className="eyebrow">APPEARANCE</span>
-                      <h2>Theme</h2>
-                    </div>
-                    {dark ? <Moon size={22} /> : <Sun size={22} />}
-                  </div>
-
-                  <div className="setting-row">
-                    <div>
-                      <strong>Dark mode</strong>
-                      <span>Comfortable research interface</span>
-                    </div>
-
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={dark}
-                        onChange={(event) => setDark(event.target.checked)}
-                      />
-                      <span />
-                    </label>
-                  </div>
-                </section>
-
-                <section className="panel">
-                  <div className="panel-heading">
-                    <div>
-                      <span className="eyebrow">DATA</span>
-                      <h2>Storage</h2>
-                    </div>
-                    <Archive size={22} />
-                  </div>
-
-                  <button
-                    className="secondary-button full"
-                    onClick={exportData}
-                  >
-                    <Upload size={17} />
-                    Export V Research Data
-                  </button>
-
-                  <button
-                    className="danger-button full"
-                    onClick={resetEverything}
-                  >
-                    <Trash2 size={17} />
-                    Reset Local Data
-                  </button>
-                </section>
-              </div>
-
-              <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <span className="eyebrow">AI CONFIGURATION</span>
-                    <h2>AI Assistants</h2>
-                  </div>
-                  <Sparkles size={22} />
-                </div>
-
-                <p>
-                  Custom AI assistants, system instructions and connected AI
-                  providers will be configured here.
-                </p>
-
-                <button
-                  className="primary-button"
-                  onClick={() => goTo("ai")}
-                >
-                  Open AI Lab
-                  <ChevronRight size={16} />
-                </button>
-              </section>
-            </section>
+            <SettingsPage
+              dark={dark}
+              setDark={setDark}
+              exportData={exportData}
+              reset={() => {
+                localStorage.clear();
+                setNotes([]);
+                setDatasets([]);
+                setHistory([]);
+              }}
+            />
           )}
         </section>
       </main>
 
       {showNote && (
         <Modal
-          title="Create Quick Note"
-          onClose={() => setShowNote(false)}
+          title="Quick Note"
+          close={() => setShowNote(false)}
         >
           <input
             className="modal-input"
             value={noteTitle}
             onChange={(event) => setNoteTitle(event.target.value)}
-            placeholder="Note title"
+            placeholder="Title"
           />
 
           <textarea
             className="modal-textarea"
             value={noteText}
             onChange={(event) => setNoteText(event.target.value)}
-            placeholder="Write your research idea..."
+            placeholder="Write your research note..."
           />
 
           <div className="modal-actions">
@@ -1146,7 +671,10 @@ export default function VResearch() {
               Cancel
             </button>
 
-            <button className="primary-button" onClick={saveNote}>
+            <button
+              className="primary-button"
+              onClick={saveNote}
+            >
               Save Note
             </button>
           </div>
@@ -1155,8 +683,8 @@ export default function VResearch() {
 
       {showDataset && (
         <Modal
-          title="Create Dataset"
-          onClose={() => setShowDataset(false)}
+          title="New Dataset"
+          close={() => setShowDataset(false)}
         >
           <input
             className="modal-input"
@@ -1168,8 +696,10 @@ export default function VResearch() {
           <input
             className="modal-input"
             value={datasetSource}
-            onChange={(event) => setDatasetSource(event.target.value)}
-            placeholder="Source / URL / description"
+            onChange={(event) =>
+              setDatasetSource(event.target.value)
+            }
+            placeholder="Source / URL"
           />
 
           <div className="modal-actions">
@@ -1180,50 +710,243 @@ export default function VResearch() {
               Cancel
             </button>
 
-            <button className="primary-button" onClick={saveDataset}>
+            <button
+              className="primary-button"
+              onClick={saveDataset}
+            >
               Save Dataset
             </button>
           </div>
         </Modal>
       )}
 
-      {showCamera && (
-        <div className="camera-overlay">
-          <div className="camera-window">
-            <div className="camera-header">
-              <div>
-                <span className="eyebrow">LIVE CAPTURE</span>
-                <h2>Research Camera</h2>
-              </div>
-
-              <button className="icon-button" onClick={closeCamera}>
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="camera-preview">
-              <video ref={videoRef} autoPlay playsInline muted />
-            </div>
-
-            <div className="camera-controls">
-              <button className="secondary-button">
-                <RefreshCw size={17} />
-                Switch Camera
-              </button>
-
-              <button className="camera-shutter" onClick={takePhoto}>
-                <Camera size={25} />
-              </button>
-
-              <button className="secondary-button">
-                <Video size={17} />
-                Video
-              </button>
-            </div>
-          </div>
-        </div>
+      {cameraOpen && (
+        <CameraModal
+          stream={videoStream}
+          close={closeCamera}
+        />
       )}
     </div>
+  );
+}
+
+function NavButton({
+  active,
+  icon,
+  label,
+  open,
+  onClick,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  open: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={active ? "nav-active" : ""}
+      onClick={onClick}
+      title={label}
+    >
+      {icon}
+      {open && <span>{label}</span>}
+    </button>
+  );
+}
+
+function PageHeader({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="page-heading">
+      <div>
+        <div className="eyebrow">{eyebrow}</div>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+
+      {action}
+    </div>
+  );
+}
+
+function Dashboard({
+  time,
+  date,
+  notes,
+  datasets,
+  timer,
+  timerRunning,
+  setTimerRunning,
+  resetTimer,
+  sessionSeconds,
+  setPage,
+}: {
+  time: string;
+  date: string;
+  notes: number;
+  datasets: number;
+  timer: number;
+  timerRunning: boolean;
+  setTimerRunning: (value: boolean) => void;
+  resetTimer: () => void;
+  sessionSeconds: number;
+  setPage: (page: Page) => void;
+}) {
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">WELCOME TO V RESEARCH 👋</div>
+          <h1>Research Command Center</h1>
+          <p>Your personal scientific workspace.</p>
+        </div>
+
+        <div className="clock-card">
+          <Clock3 size={18} />
+          <strong>{time}</strong>
+          <span>{date}</span>
+        </div>
+      </div>
+
+      <div className="dashboard-grid">
+        <DashboardCard
+          icon={<Search size={24} />}
+          title="Research Explorer"
+          value="Search"
+          description="Scientific knowledge"
+          onClick={() => setPage("research")}
+        />
+
+        <DashboardCard
+          icon={<Database size={24} />}
+          title="Datasets"
+          value={String(datasets)}
+          description="Saved datasets"
+          onClick={() => setPage("datasets")}
+        />
+
+        <DashboardCard
+          icon={<NotebookPen size={24} />}
+          title="Quick Notes"
+          value={String(notes)}
+          description="Research ideas"
+          onClick={() => setPage("notes")}
+        />
+
+        <DashboardCard
+          icon={<Sparkles size={24} />}
+          title="AI Lab"
+          value="READY"
+          description="Research assistant"
+          onClick={() => setPage("ai")}
+        />
+      </div>
+
+      <div className="large-grid">
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">FOCUS ENGINE</div>
+              <h2>Research Timer</h2>
+            </div>
+            <Timer size={22} />
+          </div>
+
+          <div className="timer-display">
+            {formatTimer(timer)}
+          </div>
+
+          <div className="timer-controls">
+            <button
+              className="primary-button"
+              onClick={() => setTimerRunning(!timerRunning)}
+            >
+              {timerRunning ? "Pause" : "Start"}
+            </button>
+
+            <button
+              className="secondary-button"
+              onClick={resetTimer}
+            >
+              Reset
+            </button>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">LIVE SESSION</div>
+              <h2>Activity</h2>
+            </div>
+            <Activity size={22} />
+          </div>
+
+          <div className="activity-number">
+            {formatDuration(sessionSeconds)}
+          </div>
+
+          <p>Current workspace session</p>
+
+          <button
+            className="secondary-button full"
+            onClick={() => setPage("activity")}
+          >
+            View Activity
+            <ChevronRight size={16} />
+          </button>
+        </section>
+      </div>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">QUICK ACCESS</div>
+            <h2>Research Workspace</h2>
+          </div>
+        </div>
+
+        <div className="quick-grid">
+          <QuickTool
+            icon={<BookOpen size={22} />}
+            title="Articles"
+            text="Research topics"
+            onClick={() => setPage("articles")}
+          />
+
+          <QuickTool
+            icon={<Folder size={22} />}
+            title="Files"
+            text="Research storage"
+            onClick={() => setPage("files")}
+          />
+
+          <QuickTool
+            icon={<Calculator size={22} />}
+            title="Tools"
+            text="Research utilities"
+            onClick={() => setPage("tools")}
+          />
+
+          <QuickTool
+            icon={<Settings size={22} />}
+            title="Settings"
+            text="Customize workspace"
+            onClick={() => setPage("settings")}
+          />
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -1264,79 +987,59 @@ function QuickTool({
   return (
     <button className="quick-tool" onClick={onClick}>
       <div className="card-icon">{icon}</div>
+
       <div>
         <strong>{title}</strong>
         <span>{text}</span>
       </div>
+
       <ChevronRight size={17} />
     </button>
-  );
-}
-
-function PageTitle({
-  eyebrow,
-  title,
-  description,
-  action,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="page-heading">
-      <div>
-        <div className="eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
-        <p>{description}</p>
-      </div>
-
-      {action}
-    </div>
   );
 }
 
 function ResearchPage({
   search,
   setSearch,
-  performSearch,
-  loading,
+  searchResearch,
   results,
+  loading,
 }: {
   search: string;
   setSearch: (value: string) => void;
-  performSearch: (value?: string) => void;
+  searchResearch: () => void;
+  results: Result[];
   loading: boolean;
-  results: ResearchResult[];
 }) {
   return (
-    <section>
-      <PageTitle
+    <>
+      <PageHeader
         eyebrow="RESEARCH ENGINE"
         title="Research Explorer"
-        description="Search scientific knowledge across multiple sources."
+        description="Explore scientific knowledge from multiple sources."
       />
 
-      <div className="research-search panel">
-        <Search size={21} />
+      <section className="research-search panel">
+        <Search size={20} />
 
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") performSearch();
+            if (event.key === "Enter") {
+              searchResearch();
+            }
           }}
-          placeholder="Search a topic, paper, disease, gene, technology..."
+          placeholder="Search a research topic..."
         />
 
         <button
           className="primary-button"
-          onClick={() => performSearch()}
+          onClick={searchResearch}
         >
           Search
         </button>
-      </div>
+      </section>
 
       <div className="source-pills">
         <span>Wikipedia</span>
@@ -1345,31 +1048,31 @@ function ResearchPage({
       </div>
 
       <div className="research-results">
-        {loading ? (
+        {loading && (
           <section className="panel loading-box">
-            <RefreshCw className="spin" size={28} />
-            <h2>Searching research sources...</h2>
+            <RefreshIcon />
+            <h2>Searching...</h2>
           </section>
-        ) : results.length === 0 ? (
-          <section className="panel">
-            <EmptyState
-              icon={<Search size={30} />}
-              title="Start exploring"
-              text="Search for a research topic to see results here."
-            />
-          </section>
-        ) : (
+        )}
+
+        {!loading &&
           results.map((result, index) => (
-            <article className="research-result" key={index}>
+            <article
+              className="research-result"
+              key={result.url + index}
+            >
               <div className="result-icon">
-                <BookOpen size={21} />
+                <BookOpen size={20} />
               </div>
 
               <div>
-                <h3>{result.title || "Untitled research result"}</h3>
-                <p>
-                  {result.description || "No description available."}
-                </p>
+                <span className="result-source">
+                  {result.source}
+                </span>
+
+                <h3>{result.title}</h3>
+
+                <p>{result.description}</p>
 
                 {result.url && (
                   <a
@@ -1382,33 +1085,49 @@ function ResearchPage({
                 )}
               </div>
             </article>
-          ))
+          ))}
+
+        {!loading && results.length === 0 && (
+          <section className="panel">
+            <Empty
+              icon={<Search size={28} />}
+              title="Start researching"
+              text="Search for a topic above."
+            />
+          </section>
         )}
       </div>
-    </section>
+    </>
   );
 }
 
 function ArticlesPage({
-  onSearch,
+  setSearch,
+  searchResearch,
 }: {
-  onSearch: (query: string) => void;
+  setSearch: (value: string) => void;
+  searchResearch: () => void;
 }) {
   const topics = [
-    "oncology research",
-    "gene editing research",
-    "virology research",
-    "artificial intelligence medicine",
-    "drug discovery",
-    "synthetic biology",
+    "Cancer research",
+    "Gene editing",
+    "Virology",
+    "Drug discovery",
+    "Synthetic biology",
+    "AI in medicine",
   ];
 
+  function explore(topic: string) {
+    setSearch(topic);
+    setTimeout(searchResearch, 0);
+  }
+
   return (
-    <section>
-      <PageTitle
+    <>
+      <PageHeader
         eyebrow="RESEARCH FEED"
         title="Research Articles"
-        description="Explore research topics and open them in the research engine."
+        description="Explore major research areas."
       />
 
       <div className="article-grid">
@@ -1423,7 +1142,7 @@ function ArticlesPage({
 
             <button
               className="secondary-button"
-              onClick={() => onSearch(topic)}
+              onClick={() => explore(topic)}
             >
               Explore
               <ChevronRight size={16} />
@@ -1431,120 +1150,328 @@ function ArticlesPage({
           </article>
         ))}
       </div>
-    </section>
+    </>
+  );
+}
+
+function DatasetsPage({
+  datasets,
+  deleteDataset,
+  openCreate,
+}: {
+  datasets: Dataset[];
+  deleteDataset: (id: number) => void;
+  openCreate: () => void;
+}) {
+  return (
+    <>
+      <PageHeader
+        eyebrow="DATA MANAGER"
+        title="Datasets"
+        description="Store and organize research datasets."
+        action={
+          <button
+            className="primary-button"
+            onClick={openCreate}
+          >
+            <Plus size={17} />
+            New Dataset
+          </button>
+        }
+      />
+
+      <section className="panel">
+        {datasets.length === 0 ? (
+          <Empty
+            icon={<Database size={30} />}
+            title="No datasets"
+            text="Create your first research dataset."
+            button={
+              <button
+                className="primary-button"
+                onClick={openCreate}
+              >
+                Create Dataset
+              </button>
+            }
+          />
+        ) : (
+          <div className="item-list">
+            {datasets.map((dataset) => (
+              <div className="list-item" key={dataset.id}>
+                <div className="list-icon">
+                  <Database size={20} />
+                </div>
+
+                <div className="list-main">
+                  <strong>{dataset.name}</strong>
+                  <span>{dataset.source}</span>
+                  <small>{dataset.created}</small>
+                </div>
+
+                <button
+                  className="danger-icon"
+                  onClick={() => deleteDataset(dataset.id)}
+                >
+                  <Trash2 size={17} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
+function NotesPage({
+  notes,
+  deleteNote,
+  openCreate,
+}: {
+  notes: Note[];
+  deleteNote: (id: number) => void;
+  openCreate: () => void;
+}) {
+  return (
+    <>
+      <PageHeader
+        eyebrow="IDEA SPACE"
+        title="Quick Notes"
+        description="Capture research ideas and observations."
+        action={
+          <button
+            className="primary-button"
+            onClick={openCreate}
+          >
+            <Plus size={17} />
+            New Note
+          </button>
+        }
+      />
+
+      {notes.length === 0 ? (
+        <section className="panel">
+          <Empty
+            icon={<NotebookPen size={30} />}
+            title="Notebook empty"
+            text="Create your first research note."
+            button={
+              <button
+                className="primary-button"
+                onClick={openCreate}
+              >
+                Write Note
+              </button>
+            }
+          />
+        </section>
+      ) : (
+        <div className="notes-grid">
+          {notes.map((note) => (
+            <article className="note-card" key={note.id}>
+              <div className="note-top">
+                <NotebookPen size={20} />
+
+                <button
+                  className="danger-icon"
+                  onClick={() => deleteNote(note.id)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              <h3>{note.title}</h3>
+              <p>{note.text}</p>
+              <small>{note.created}</small>
+            </article>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
 function FilesPage({
-  onExport,
+  exportData,
 }: {
-  onExport: () => void;
+  exportData: () => void;
 }) {
   const [folders, setFolders] = useState<string[]>([]);
-  const [folderName, setFolderName] = useState("");
-  const [showFolder, setShowFolder] = useState(false);
+  const [folder, setFolder] = useState("");
+  const [open, setOpen] = useState(false);
 
   function createFolder() {
-    if (!folderName.trim()) return;
+    if (!folder.trim()) {
+      return;
+    }
 
-    setFolders((items) => [...items, folderName.trim()]);
-    setFolderName("");
-    setShowFolder(false);
+    setFolders((items) => [...items, folder.trim()]);
+    setFolder("");
+    setOpen(false);
   }
 
   return (
-    <section>
-      <PageTitle
+    <>
+      <PageHeader
         eyebrow="RESEARCH STORAGE"
         title="Files & Folders"
         description="Organize your research workspace."
         action={
           <button
             className="primary-button"
-            onClick={() => setShowFolder(true)}
+            onClick={() => setOpen(true)}
           >
-            <FolderPlus size={17} />
+            <Plus size={17} />
             New Folder
           </button>
         }
       />
 
       <div className="storage-actions">
-        <button className="secondary-button" onClick={onExport}>
+        <button
+          className="secondary-button"
+          onClick={exportData}
+        >
           <Upload size={17} />
           Export Data
         </button>
 
-        <button
-          className="secondary-button"
-          onClick={() =>
-            alert(
-              "Device file access will be connected in the storage integration step."
-            )
-          }
-        >
-          <Folder size={17} />
-          Device Storage
-        </button>
+        <label className="secondary-button">
+          <FileText size={17} />
+          Import File
+          <input
+            type="file"
+            hidden
+            onChange={() =>
+              window.alert(
+                "File selected. Full file-manager storage will be connected in the next stage."
+              )
+            }
+          />
+        </label>
       </div>
 
       <div className="folder-grid">
-        {folders.map((folder) => (
-          <div className="folder-card" key={folder}>
+        {folders.map((item) => (
+          <div className="folder-card" key={item}>
             <Folder size={32} />
-            <strong>{folder}</strong>
+            <strong>{item}</strong>
             <span>Research folder</span>
           </div>
         ))}
-
-        {folders.length === 0 && (
-          <section className="panel">
-            <EmptyState
-              icon={<Folder size={30} />}
-              title="No folders yet"
-              text="Create folders to organize your research."
-              button={
-                <button
-                  className="primary-button"
-                  onClick={() => setShowFolder(true)}
-                >
-                  <FolderPlus size={17} />
-                  Create Folder
-                </button>
-              }
-            />
-          </section>
-        )}
       </div>
 
-      {showFolder && (
+      {folders.length === 0 && (
+        <section className="panel">
+          <Empty
+            icon={<Folder size={30} />}
+            title="No folders"
+            text="Create a folder to organize your research."
+            button={
+              <button
+                className="primary-button"
+                onClick={() => setOpen(true)}
+              >
+                <Plus size={17} />
+                Create Folder
+              </button>
+            }
+          />
+        </section>
+      )}
+
+      {open && (
         <Modal
-          title="Create New Folder"
-          onClose={() => setShowFolder(false)}
+          title="Create Folder"
+          close={() => setOpen(false)}
         >
           <input
             className="modal-input"
-            value={folderName}
-            onChange={(event) => setFolderName(event.target.value)}
-            placeholder="Folder name"
             autoFocus
+            value={folder}
+            onChange={(event) => setFolder(event.target.value)}
+            placeholder="Folder name"
           />
 
           <div className="modal-actions">
             <button
               className="secondary-button"
-              onClick={() => setShowFolder(false)}
+              onClick={() => setOpen(false)}
             >
               Cancel
             </button>
 
-            <button className="primary-button" onClick={createFolder}>
-              Create Folder
+            <button
+              className="primary-button"
+              onClick={createFolder}
+            >
+              Create
             </button>
           </div>
         </Modal>
       )}
-    </section>
+    </>
+  );
+}
+
+function AIPage({
+  input,
+  setInput,
+  answer,
+  askAI,
+}: {
+  input: string;
+  setInput: (value: string) => void;
+  answer: string;
+  askAI: () => void;
+}) {
+  return (
+    <>
+      <PageHeader
+        eyebrow="AI LAB"
+        title="Research AI"
+        description="Ask questions and work with your research assistant."
+      />
+
+      <section className="panel ai-chat">
+        <div className="ai-welcome">
+          <div className="card-icon">
+            <Sparkles size={25} />
+          </div>
+
+          <h2>V Research AI</h2>
+
+          <p>
+            Ask about research concepts, papers, hypotheses or
+            scientific topics.
+          </p>
+        </div>
+
+        {answer && (
+          <div className="ai-answer">
+            <strong>AI</strong>
+            <p>{answer}</p>
+          </div>
+        )}
+
+        <div className="ai-input">
+          <textarea
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Ask a research question..."
+          />
+
+          <button
+            className="primary-button"
+            onClick={askAI}
+          >
+            <Sparkles size={17} />
+            Ask AI
+          </button>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -1552,7 +1479,7 @@ function ToolsPage({
   calculator,
   setCalculator,
   calculate,
-  timerDisplay,
+  timer,
   timerRunning,
   setTimerRunning,
   resetTimer,
@@ -1560,25 +1487,25 @@ function ToolsPage({
   calculator: string;
   setCalculator: (value: string) => void;
   calculate: () => void;
-  timerDisplay: string;
+  timer: number;
   timerRunning: boolean;
   setTimerRunning: (value: boolean) => void;
   resetTimer: () => void;
 }) {
   return (
-    <section>
-      <PageTitle
+    <>
+      <PageHeader
         eyebrow="LAB TOOLS"
         title="Research Tools"
-        description="Useful utilities for your research workstation."
+        description="Utilities for your research workflow."
       />
 
       <div className="tools-grid">
-        <section className="panel calculator-panel">
+        <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">CALCULATOR</span>
-              <h2>Scientific Workspace</h2>
+              <div className="eyebrow">CALCULATOR</div>
+              <h2>Calculator</h2>
             </div>
 
             <Calculator size={22} />
@@ -1587,9 +1514,13 @@ function ToolsPage({
           <input
             className="calculator-display"
             value={calculator}
-            onChange={(event) => setCalculator(event.target.value)}
+            onChange={(event) =>
+              setCalculator(event.target.value)
+            }
             onKeyDown={(event) => {
-              if (event.key === "Enter") calculate();
+              if (event.key === "Enter") {
+                calculate();
+              }
             }}
             placeholder="Type calculation..."
           />
@@ -1615,41 +1546,55 @@ function ToolsPage({
             ].map((key) => (
               <button
                 key={key}
-                onClick={() => setCalculator(`${calculator}${key}`)}
+                onClick={() =>
+                  setCalculator(calculator + key)
+                }
               >
                 {key}
               </button>
             ))}
 
-            <button onClick={() => setCalculator("")}>Clear</button>
+            <button onClick={() => setCalculator("")}>
+              Clear
+            </button>
 
-            <button className="calculate-key" onClick={calculate}>
+            <button
+              className="calculate-key"
+              onClick={calculate}
+            >
               =
             </button>
           </div>
         </section>
 
-        <section className="panel tool-timer">
+        <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">FOCUS TIMER</span>
-              <h2>Timer</h2>
+              <div className="eyebrow">FOCUS</div>
+              <h2>Research Timer</h2>
             </div>
+
             <Timer size={22} />
           </div>
 
-          <div className="large-timer">{timerDisplay}</div>
+          <div className="large-timer">
+            {formatTimer(timer)}
+          </div>
 
           <div className="timer-controls">
             <button
               className="primary-button"
-              onClick={() => setTimerRunning(!timerRunning)}
+              onClick={() =>
+                setTimerRunning(!timerRunning)
+              }
             >
-              <Play size={16} />
               {timerRunning ? "Pause" : "Start"}
             </button>
 
-            <button className="secondary-button" onClick={resetTimer}>
+            <button
+              className="secondary-button"
+              onClick={resetTimer}
+            >
               Reset
             </button>
           </div>
@@ -1658,57 +1603,325 @@ function ToolsPage({
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">UTILITY</span>
+              <div className="eyebrow">DIRECTION</div>
               <h2>Compass</h2>
             </div>
+
             <Compass size={22} />
           </div>
 
           <div className="compass">
-            <span>N</span>
+            <strong>N</strong>
             <div className="compass-needle">▲</div>
-            <span>S</span>
+            <strong>S</strong>
           </div>
 
           <p className="center-text">
-            Device orientation integration will activate when supported by the
-            browser.
+            Device orientation support will be connected later.
           </p>
         </section>
 
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">CONVERSION</span>
+              <div className="eyebrow">CONVERSION</div>
               <h2>Unit Converter</h2>
             </div>
-            <RefreshCw size={22} />
           </div>
 
-          <div className="converter-demo">
-            <input placeholder="Value" />
-            <select defaultValue="kg">
-              <option value="kg">Kilograms</option>
-              <option value="g">Grams</option>
-              <option value="mg">Milligrams</option>
-              <option value="lb">Pounds</option>
-              <option value="m">Meters</option>
-              <option value="cm">Centimeters</option>
-              <option value="km">Kilometers</option>
-            </select>
-          </div>
+          <input
+            className="modal-input"
+            placeholder="Enter value"
+            type="number"
+          />
 
-          <p>
-            More scientific, laboratory and currency conversions will be added
-            to the full tools engine.
-          </p>
+          <select className="modal-input">
+            <option>Kilograms → Grams</option>
+            <option>Grams → Milligrams</option>
+            <option>Meters → Centimeters</option>
+            <option>Kilometers → Meters</option>
+            <option>Celsius → Fahrenheit</option>
+          </select>
         </section>
       </div>
-    </section>
+    </>
   );
 }
 
-function EmptyState({
+function ActivityPage({
+  seconds,
+  notes,
+  datasets,
+}: {
+  seconds: number;
+  notes: number;
+  datasets: number;
+}) {
+  return (
+    <>
+      <PageHeader
+        eyebrow="WORKSPACE MONITOR"
+        title="Activity"
+        description="Visible information about your current session."
+      />
+
+      <div className="dashboard-grid">
+        <DashboardCard
+          icon={<Clock3 size={24} />}
+          title="Session"
+          value={formatDuration(seconds)}
+          description="Current session"
+        />
+
+        <DashboardCard
+          icon={<Activity size={24} />}
+          title="Status"
+          value="Active"
+          description="Workspace running"
+        />
+
+        <DashboardCard
+          icon={<NotebookPen size={24} />}
+          title="Notes"
+          value={String(notes)}
+          description="Saved notes"
+        />
+
+        <DashboardCard
+          icon={<Database size={24} />}
+          title="Datasets"
+          value={String(datasets)}
+          description="Saved datasets"
+        />
+      </div>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">LIVE LOG</div>
+            <h2>Current Session</h2>
+          </div>
+
+          <Activity size={22} />
+        </div>
+
+        <div className="activity-log">
+          <div>
+            <span className="status-dot" />
+            V Research session active
+            <small>{formatDuration(seconds)}</small>
+          </div>
+
+          <div>
+            <span className="status-dot" />
+            Workspace activity recording
+            <small>Visible to the user</small>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function SettingsPage({
+  dark,
+  setDark,
+  exportData,
+  reset,
+}: {
+  dark: boolean;
+  setDark: (value: boolean) => void;
+  exportData: () => void;
+  reset: () => void;
+}) {
+  return (
+    <>
+      <PageHeader
+        eyebrow="CONTROL CENTER"
+        title="Settings"
+        description="Customize your V Research workspace."
+      />
+
+      <div className="settings-grid">
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">APPEARANCE</div>
+              <h2>Theme</h2>
+            </div>
+
+            {dark ? <Moon size={22} /> : <Sun size={22} />}
+          </div>
+
+          <div className="setting-row">
+            <div>
+              <strong>Dark Mode</strong>
+              <span>Switch between light and dark workspace.</span>
+            </div>
+
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={dark}
+                onChange={(event) =>
+                  setDark(event.target.checked)
+                }
+              />
+              <span />
+            </label>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">DATA</div>
+              <h2>Backup</h2>
+            </div>
+
+            <Upload size={22} />
+          </div>
+
+          <button
+            className="secondary-button full"
+            onClick={exportData}
+          >
+            <Upload size={17} />
+            Export V Research Data
+          </button>
+
+          <button
+            className="danger-button full"
+            onClick={reset}
+          >
+            <Trash2 size={17} />
+            Reset Local Data
+          </button>
+        </section>
+      </div>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">CUSTOMIZATION</div>
+            <h2>Workspace Settings</h2>
+          </div>
+
+          <Settings size={22} />
+        </div>
+
+        <p>
+          Font, text size, accent color, AI assistants,
+          accessibility and advanced research preferences will
+          be connected here.
+        </p>
+      </section>
+    </>
+  );
+}
+
+function CameraModal({
+  stream,
+  close,
+}: {
+  stream: MediaStream | null;
+  close: () => void;
+}) {
+  const videoRef = (element: HTMLVideoElement | null) => {
+    if (element && stream) {
+      element.srcObject = stream;
+    }
+  };
+
+  return (
+    <div className="camera-overlay">
+      <div className="camera-window">
+        <div className="camera-header">
+          <div>
+            <div className="eyebrow">LIVE CAPTURE</div>
+            <h2>Research Camera</h2>
+          </div>
+
+          <button className="icon-button" onClick={close}>
+            <X size={19} />
+          </button>
+        </div>
+
+        <div className="camera-preview">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+          />
+        </div>
+
+        <div className="camera-controls">
+          <button
+            className="secondary-button"
+            onClick={() =>
+              window.alert(
+                "Camera switching will be connected in the next camera module."
+              )
+            }
+          >
+            Switch Camera
+          </button>
+
+          <button
+            className="camera-shutter"
+            onClick={() =>
+              window.alert(
+                "Camera preview is active. Capture tools will be expanded next."
+              )
+            }
+          >
+            <Camera size={25} />
+          </button>
+
+          <button
+            className="secondary-button"
+            onClick={() =>
+              window.alert(
+                "Video recording will be added to the camera module."
+              )
+            }
+          >
+            Record
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Modal({
+  title,
+  children,
+  close,
+}: {
+  title: string;
+  children: React.ReactNode;
+  close: () => void;
+}) {
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <div className="modal-heading">
+          <h2>{title}</h2>
+
+          <button className="icon-button" onClick={close}>
+            <X size={19} />
+          </button>
+        </div>
+
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Empty({
   icon,
   title,
   text,
@@ -1729,40 +1942,51 @@ function EmptyState({
   );
 }
 
-function Modal({
-  title,
-  children,
-  onClose,
-}: {
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
+function RefreshIcon() {
   return (
-    <div className="modal-overlay">
-      <div className="modal">
-        <div className="modal-heading">
-          <h2>{title}</h2>
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+      <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+    </svg>
+  );
+}
 
-          <button className="icon-button" onClick={onClose}>
-            <X size={19} />
-          </button>
-        </div>
+function formatTimer(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remaining = seconds % 60;
 
-        {children}
-      </div>
-    </div>
+  return (
+    String(minutes).padStart(2, "0") +
+    ":" +
+    String(remaining).padStart(2, "0")
   );
 }
 
 function formatDuration(seconds: number) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
+  const remaining = seconds % 60;
 
   if (hours > 0) {
-    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+    return (
+      String(hours) +
+      "h " +
+      String(minutes).padStart(2, "0") +
+      "m"
+    );
   }
 
-  return `${minutes}m ${String(remainingSeconds).padStart(2, "0")}s`;
+  return (
+    String(minutes) +
+    "m " +
+    String(remaining).padStart(2, "0") +
+    "s"
+  );
 }
