@@ -3,7 +3,6 @@
 import { FormEvent, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { FlaskConical } from "lucide-react";
-import "./auth.css";
 
 type DialogType = "signin" | "signup" | "forgot";
 
